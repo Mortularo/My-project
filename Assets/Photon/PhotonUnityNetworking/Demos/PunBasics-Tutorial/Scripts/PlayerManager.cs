@@ -1,19 +1,9 @@
-﻿// --------------------------------------------------------------------------------------------------------------------
-// <copyright file="PlayerManager.cs" company="Exit Games GmbH">
-//   Part of: Photon Unity Networking Demos
-// </copyright>
-// <summary>
-//  Used in PUN Basics Tutorial to deal with the networked player instance
-// </summary>
-// <author>developer@exitgames.com</author>
-// --------------------------------------------------------------------------------------------------------------------
-
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace Photon.Pun.Demo.PunBasics
 {
-	#pragma warning disable 649
+#pragma warning disable 649
 
     /// <summary>
     /// Player manager.
@@ -25,6 +15,9 @@ namespace Photon.Pun.Demo.PunBasics
 
         [Tooltip("The current Health of our player")]
         public float Health = 1f;
+
+        public float Damage = 1f;
+        public int Exp;
 
         [Tooltip("The local player instance. Use this to know if the local player is represented in the Scene")]
         public static GameObject LocalPlayerInstance;
@@ -40,6 +33,14 @@ namespace Photon.Pun.Demo.PunBasics
         [Tooltip("The Beams GameObject to control")]
         [SerializeField]
         private GameObject beams;
+
+        private float _id;
+
+        public float Id
+        {
+            get => photonView.ViewID;
+            set => _id = value;
+        }
 
         //True, when the user is firing
         bool IsFiring;
@@ -104,22 +105,22 @@ namespace Photon.Pun.Demo.PunBasics
                 Debug.LogWarning("<Color=Red><b>Missing</b></Color> PlayerUiPrefab reference on player Prefab.", this);
             }
 
-            #if UNITY_5_4_OR_NEWER
+#if UNITY_5_4_OR_NEWER
             // Unity 5.4 has a new scene management. register a method to call CalledOnLevelWasLoaded.
-			UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
-            #endif
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+#endif
         }
 
 
-		public override void OnDisable()
-		{
-			// Always call the base to remove callbacks
-			base.OnDisable ();
+        public override void OnDisable()
+        {
+            // Always call the base to remove callbacks
+            base.OnDisable();
 
-			#if UNITY_5_4_OR_NEWER
-			UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
-			#endif
-		}
+#if UNITY_5_4_OR_NEWER
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+#endif
+        }
 
         private bool leavingRoom;
 
@@ -174,7 +175,10 @@ namespace Photon.Pun.Demo.PunBasics
                 return;
             }
 
-            this.Health -= 0.1f;
+            this.Health -= other.gameObject.GetComponentInParent<PlayerManager>().Damage * 0.1f;
+
+            if (other.gameObject.GetComponentInParent<PlayerManager>().Health <= 0)
+                Exp += 1;
         }
 
         /// <summary>
@@ -198,17 +202,20 @@ namespace Photon.Pun.Demo.PunBasics
             }
 
             // we slowly affect health when beam is constantly hitting us, so player has to move to prevent death.
-            this.Health -= 0.1f*Time.deltaTime;
+            this.Health -= other.gameObject.GetComponentInParent<PlayerManager>().Damage * 0.1f * Time.deltaTime;
+
+            if (other.gameObject.GetComponentInParent<PlayerManager>().Health <= 0)
+                Exp += 1;
         }
 
 
-        #if !UNITY_5_4_OR_NEWER
+#if !UNITY_5_4_OR_NEWER
         /// <summary>See CalledOnLevelWasLoaded. Outdated in Unity 5.4.</summary>
         void OnLevelWasLoaded(int level)
         {
             this.CalledOnLevelWasLoaded(level);
         }
-        #endif
+#endif
 
 
         /// <summary>
@@ -234,12 +241,12 @@ namespace Photon.Pun.Demo.PunBasics
         #region Private Methods
 
 
-		#if UNITY_5_4_OR_NEWER
-		void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadingMode)
-		{
-			this.CalledOnLevelWasLoaded(scene.buildIndex);
-		}
-		#endif
+#if UNITY_5_4_OR_NEWER
+        void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode loadingMode)
+        {
+            this.CalledOnLevelWasLoaded(scene.buildIndex);
+        }
+#endif
 
         /// <summary>
         /// Processes the inputs. This MUST ONLY BE USED when the player has authority over this Networked GameObject (photonView.isMine == true)
@@ -281,12 +288,14 @@ namespace Photon.Pun.Demo.PunBasics
                 // We own this player: send the others our data
                 stream.SendNext(this.IsFiring);
                 stream.SendNext(this.Health);
+                stream.SendNext(Id);
             }
             else
             {
                 // Network player, receive data
                 this.IsFiring = (bool)stream.ReceiveNext();
                 this.Health = (float)stream.ReceiveNext();
+                Id = (float)stream.ReceiveNext();
             }
         }
 

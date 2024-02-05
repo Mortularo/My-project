@@ -70,3 +70,7 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+Assets/PlayfabAccountUI/UI/Icons/noun_back_1473870.png.meta
+Assets/PlayfabAccountUI/UI/Shapes/RoundRect_Border_Thick.png.meta
+Assets/PlayfabAccountUI/UI/Shapes/RoundRect_Fill.png.meta
+*.meta
